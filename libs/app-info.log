@@ -1,0 +1,17 @@
+[INFO ] 2018-11-11 08:39:02.561 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:39:02.563 [main] SmlToJSONClient - Sending to Influx DB with ''http://127.0.0.1:8086':MeteringData:Demo_1:admin:'iskra#01'
+[INFO ] 2018-11-11 08:39:44.632 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:39:44.634 [main] SmlToJSONClient - Sending to Influx DB with ''http://127.0.0.1:8086':MeteringData:Demo_1:admin:'iskra#01'
+[INFO ] 2018-11-11 08:40:59.216 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:40:59.219 [main] SmlToJSONClient - Sending to Influx DB with ''http://127.0.0.1:8086':MeteringData:Demo_1:admin:'iskra#01'
+[INFO ] 2018-11-11 08:43:13.269 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:43:13.271 [main] SmlToJSONClient - Sending to Influx DB with ''http://127.0.0.1:8086':MeteringData:Demo_1:admin:'iskra#01'
+[INFO ] 2018-11-11 08:53:04.495 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:53:04.497 [main] SmlToJSONClient - Sending to Influx DB with ''http://127.0.0.1:8086':MeteringData:Demo_1:admin:'iskra#01'
+[INFO ] 2018-11-11 08:53:58.438 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:53:58.440 [main] SmlToJSONClient - Sending to Influx DB with 'http://127.0.0.1:8086:MeteringData:Demo_1:admin:iskra#01
+[INFO ] 2018-11-11 08:53:58.759 [main] SmlToJSONClient - InfluxDB data forwarding
+[INFO ] 2018-11-11 08:57:04.360 [main] SmlToJSONClient - Reading TCP-Data from '192.168.8.138:8899'
+[INFO ] 2018-11-11 08:57:04.363 [main] SmlToJSONClient - Sending to Influx DB with 'http://127.0.0.1:8086:MeteringData:Demo_1:admin:iskra#01
+[INFO ] 2018-11-11 08:57:04.696 [main] SmlToJSONClient - InfluxDB data forwarding
+[INFO ] 2018-11-11 08:57:15.590 [main] SmlToJSONClient - InfluxDB data forwarding
