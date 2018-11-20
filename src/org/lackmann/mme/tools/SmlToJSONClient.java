@@ -18,6 +18,7 @@ import org.lackmann.connectors.USBConnector;
 import org.lackmann.connectors.db.InfluxConnector;
 import org.lackmann.connectors.db.MeterDataRecord;
 import org.openmuc.jsml.structures.OctetString;
+import org.openmuc.jsml.structures.SmlFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -34,7 +35,7 @@ public class SmlToJSONClient {
 	public final static String APP_NAME = "SMLToJSON - Data Structure Converter for Receiving and Forwarding Meter Data";
 
 	public final static String MAIN_VERSION = "0";
-	public final static String SUB_VERSION  = "02";
+	public final static String SUB_VERSION  = "03";
 
 	public final static String EMAIL = "info@lackmann.de";
 
@@ -92,12 +93,12 @@ public class SmlToJSONClient {
 		if(opts.getUSB_Device() != null)
 		{
 			LOGGER.info("Reading USB-Data from '" + opts.getUSB_Device() + "'");
-			usbCon = new USBConnector(opts.getUSB_Device());
+			usbCon = new USBConnector(opts.getUSB_Device(), opts.getRetries(), opts.getWaitTime());
 		}
 		if(opts.getTCP_Port() > 0)
 		{
 			LOGGER.info("Reading TCP-Data from '" + opts.getTCP_Address() + ":" + opts.getTCP_Port() + "'");
-			tcpCon = new TCPConnector(opts.getTCP_Address(), opts.getTCP_Port());
+			tcpCon = new TCPConnector(opts.getTCP_Address(), opts.getTCP_Port(), opts.getRetries(), opts.getWaitTime());
 		}
 
 		if(opts.isArtificialData())
@@ -175,43 +176,29 @@ public class SmlToJSONClient {
 						break;
 					}
 
-					try
+					SmlFile tmpSmlFile = null;
+					tmpSmlFile = readSMLFileFromUSB();
+					if(tmpSmlFile != null)
 					{
-						if(usbCon != null && usbCon.hasConnection())
+						smlWorker.setSmlFile(tmpSmlFile);
+						jsonMeterReading.add(smlWorker.getSMLAsJson());
+						IPCTelegram.add(smlWorker.getForIPC());							
+					}
+					else
+					{
+						tmpSmlFile = readSMLFileFromTCP();
+						if(tmpSmlFile != null)
 						{
-							smlWorker.setSmlFile(usbCon.getConnection().getSMLFile());
+							smlWorker.setSmlFile(tmpSmlFile);
 							jsonMeterReading.add(smlWorker.getSMLAsJson());
-							IPCTelegram.add(smlWorker.getForIPC());
+							IPCTelegram.add(smlWorker.getForIPC());							
 						}
-
-						if(tcpCon != null && tcpCon.hasConnection())
-						{
-							smlWorker.setSmlFile(tcpCon.getConnection().getSMLFile());
-							jsonMeterReading.add(smlWorker.getSMLAsJson());
-							IPCTelegram.add(smlWorker.getForIPC());
-						}
-
 						closeInputDevice();
 						break;
 					}
 
-					catch(java.io.IOException ex)
-					{
-
-						if(usbCon.hasConnection())
-						{
-							LOGGER.error("Error in reading from USB device '" + opts.getUSB_Device() + "'");
-						}
-						else if(tcpCon.hasConnection())
-						{
-							LOGGER.error("Error reading from TCP connection '" + 
-									opts.getTCP_Address() + ":" + opts.getTCP_Port() + "'");
-						}
-						LOGGER.error("Details: \"" + ex.getLocalizedMessage() +"\"");
-						continue;
-					}
+					continue;
 				}
-
 				closeInputDevice();
 			}
 
@@ -222,12 +209,28 @@ public class SmlToJSONClient {
 
 			if(jsonMeterReading.size() > 0 || IPCTelegram.size() > 0)
 			{
-				if(openOutputDevice())
+				if(hasOutputDevice())
 				{
-					processSMLReading(jsonMeterReading, IPCTelegram);
+					if(openOutputDevice())
+					{
+						processSMLReading(jsonMeterReading, IPCTelegram);
 
-					closeOutputDevice();
+						closeOutputDevice();
+					}
+					else
+					{
+						LOGGER.warn("Unable to open any output device");
+					}
 				}
+				else
+				{
+					LOGGER.warn("No output device defined. Result will be written to stdout");
+					processSMLReading(jsonMeterReading, IPCTelegram);
+				}
+			}
+			else
+			{
+				LOGGER.warn("No data read from any device");
 			}
 
 			try
@@ -251,6 +254,77 @@ public class SmlToJSONClient {
 
 	}
 
+	private static SmlFile readSMLFileFromTCP()
+	{
+		if(tcpCon != null && tcpCon.hasConnection())
+		{
+			try
+			{
+				return tcpCon.getConnection().getSMLFile();
+			}
+			catch(java.io.IOException ex)
+			{
+				LOGGER.error("Error reading from TCP connection '" + 
+						opts.getTCP_Address() + ":" + opts.getTCP_Port() + "'");
+				if(ex.getLocalizedMessage().contains("Timeout"))
+				{
+					int timeout = tcpCon.getTimeout();
+					if(timeout > -1)
+					{
+						LOGGER.error("Details: Timeout " + timeout + " ms  elapsed");
+					}
+					else
+					{
+						LOGGER.error("Details: Timeout elapsed");
+					}
+				}
+				else
+				{
+					LOGGER.error("Details: \"" + ex.getLocalizedMessage() +"\"");
+				}
+			}
+
+		}
+
+		return null;
+	}
+	
+
+	private static SmlFile readSMLFileFromUSB()
+	{
+		if(usbCon != null && usbCon.hasConnection())
+		{
+			try
+			{
+				return usbCon.getConnection().getSMLFile();
+			}
+			catch(java.io.IOException ex)
+			{
+				LOGGER.error("Error in reading from USB device '" + opts.getUSB_Device() + "'");
+				if(ex.getLocalizedMessage().contains("Timeout"))
+				{
+					int timeout = usbCon.getTimeout();
+					
+					if(timeout > -1)
+					{
+						LOGGER.error("Details: Timeout " + timeout + " ms  elapsed");
+					}
+					else
+					{
+						LOGGER.error("Details: Timeout elapsed");
+					}
+				}
+				else
+				{
+					LOGGER.error("Details: \"" + ex.getLocalizedMessage() +"\"");
+				}
+			}
+		}
+
+		return null;
+	}
+	
+
 	private static boolean openInputDevice()
 	{
 		boolean status = false;
@@ -262,7 +336,10 @@ public class SmlToJSONClient {
 
 		if(tcpCon != null)
 		{
-			status = tcpCon.open();
+			if(status)
+				tcpCon.open();
+			else
+				status = tcpCon.open();
 		}
 
 		if(opts.isArtificialData())
@@ -271,6 +348,11 @@ public class SmlToJSONClient {
 		}
 
 		return status;
+	}
+
+	private static boolean hasOutputDevice()
+	{
+		return (ipcCon != null || restCon != null || influxCon != null);
 	}
 
 	private static boolean openOutputDevice()
@@ -290,11 +372,6 @@ public class SmlToJSONClient {
 		if(influxCon != null)
 		{
 			status = influxCon.open();
-		}
-
-		if(opts.isArtificialData())
-		{
-			status = true;
 		}
 
 		return status;

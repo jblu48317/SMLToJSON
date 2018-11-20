@@ -13,29 +13,32 @@ public class TCPConnector
 	private TConnection TCP_Connection = null;
 
 	private String tcp_Address;
-
 	private int tcp_Port;
+	private int retries;
+	private int wait;
 
 	final static Logger LOGGER = LogManager.getLogger(TCPConnector.class.getName());
 
-	public TCPConnector(String tcp_Address, int tcp_Port)
+	public TCPConnector(String tcp_Address, int tcp_Port, int retries, int wait)
 	{
 		this.tcp_Address = tcp_Address;	
 		this.tcp_Port = tcp_Port;	
+		this.retries = retries;
+		this.wait = wait;
 	}
 
 	public boolean open()
 	{
 		boolean status = false;
-		int openRetries = 3;
-		int openRetryWaitTime = 1;
 
-		for(int r=0; r < openRetries; r++)
+		for(int r=0; r < retries; r++)
 		{
 
 			try
 			{
 				TSAP sml_tSAP = new TSAP();
+				sml_tSAP.setMessageTimeout(1000);
+				sml_tSAP.setMessageFragmentTimeout(1000);
 				TCP_Connection = sml_tSAP.connectTo(InetAddress.getByName(tcp_Address), tcp_Port, 0);
 				status = true;
 				break;
@@ -48,7 +51,7 @@ public class TCPConnector
 
 			try
 			{
-				java.util.concurrent.TimeUnit.SECONDS.sleep(openRetryWaitTime);
+				java.util.concurrent.TimeUnit.SECONDS.sleep(wait);
 			} 
 			catch (InterruptedException e)
 			{
@@ -77,6 +80,11 @@ public class TCPConnector
 		if(TCP_Connection != null)
 			TCP_Connection.close();
 		TCP_Connection = null;
+	}
+	
+	public int getTimeout()
+	{
+		return -1;
 	}
 
 }

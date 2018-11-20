@@ -1,5 +1,6 @@
 package org.lackmann.connectors;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +11,7 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 import gnu.io.SerialPort;
+import gnu.io.UnsupportedCommOperationException;
 
 
 public class USBConnector
@@ -18,26 +20,44 @@ public class USBConnector
 	private String usb_Device           = null;
 	private SerialPort USB_Port         = null;
 	private SerialReceiver USB_Receiver = null;
+	private int retries;
+	private int wait;
 
 	final static Logger LOGGER = LogManager.getLogger(USBConnector.class.getName());
 
-	public USBConnector(String usb_Device)
+	public USBConnector(String usb_Device, int retries, int wait)
 	{
 		this.usb_Device = usb_Device;
+		this.retries = retries;
+		this.wait = wait;
+		
 	}
 
 	public boolean open()
 	{
 		boolean status = false;
-		int openRetries = 3;
-		int openRetryWaitTime = 1;
+		
+		File usb = new File(usb_Device);
+		if(!usb.exists())
+		{
+			LOGGER.error("Device '" + usb_Device + "' not existing");
+			return false;
+		}
 
-		for(int r=0; r < openRetries; r++)
+		for(int r=0; r < retries; r++)
 		{
 
 			try
 			{
-				USB_Port = (SerialPort) CommPortIdentifier.getPortIdentifier(usb_Device).open("SML_USB",2000);
+				USB_Port = (SerialPort) CommPortIdentifier.getPortIdentifier(usb_Device).open("SML_USB",500);
+				try
+				{
+					USB_Port.enableReceiveTimeout(1000);
+				} catch (UnsupportedCommOperationException ex)
+				{
+					LOGGER.error("Unable to set timeout for device '" + usb_Device + "'");
+					LOGGER.error("Details: '" + ex.getLocalizedMessage() +"'");
+				}
 				USB_Receiver = new SerialReceiver(USB_Port);
 				status = true;
 				break;
@@ -62,7 +82,7 @@ public class USBConnector
 
 			try
 			{
-				java.util.concurrent.TimeUnit.SECONDS.sleep(openRetryWaitTime);
+				java.util.concurrent.TimeUnit.SECONDS.sleep(wait);
 			} 
 			catch (InterruptedException e)
 			{
@@ -106,5 +126,12 @@ public class USBConnector
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public int getTimeout()
+	{
+		if(USB_Port != null)
+			return USB_Port.getReceiveTimeout();
+		return -1;
 	}
 }
